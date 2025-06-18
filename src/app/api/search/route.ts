@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const { query } = body;
     
     // Forward the request to our Python backend
-    const response = await fetch('http://localhost:5000/process_search', {
+    const response = await fetch(process.env.VERCEL_URL || 'http://localhost:5000', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

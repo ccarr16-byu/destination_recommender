@@ -23,12 +23,12 @@ logging.basicConfig(
 load_dotenv()
 
 # Initialize OpenAI client
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
 # Initialize Supabase client
 supabase: Client = create_client(
-    os.getenv('SUPABASE_URL'),
-    os.getenv('SUPABASE_KEY')
+    os.environ.get('SUPABASE_URL'),
+    os.environ.get('SUPABASE_KEY')
 )
 
 fdir = os.path.dirname(__file__)
@@ -50,7 +50,7 @@ def get_place_photo(place_name: str, location: tuple[float, float]) -> Optional[
             "query": place_name,
             "location": f"{location[0]},{location[1]}",
             "radius": "1000",  # 1km radius
-            "key": os.getenv("GOOGLE_MAPS_API_KEY")
+            "key": os.environ.get("GOOGLE_MAPS_API_KEY")
         }
         
         search_response = requests.get(search_url, params=search_params)
@@ -66,7 +66,7 @@ def get_place_photo(place_name: str, location: tuple[float, float]) -> Optional[
         details_params = {
             "place_id": place_id,
             "fields": "photos",
-            "key": os.getenv("GOOGLE_MAPS_API_KEY")
+            "key": os.environ.get("GOOGLE_MAPS_API_KEY")
         }
         
         details_response = requests.get(details_url, params=details_params)

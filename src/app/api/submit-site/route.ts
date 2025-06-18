@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     // Send the data to the backend
-    const response = await fetch('http://localhost:5000/submit_site', {
+    const response = await fetch(process.env.VERCEL_URL || 'http://localhost:5000', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

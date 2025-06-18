@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    const response = await fetch('http://localhost:5000/all_sites');
+    const response = await fetch(process.env.VERCEL_URL || 'http://localhost:5000');
     
     if (!response.ok) {
       throw new Error(`Backend responded with status: ${response.status}`);
