@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const backendUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5000';
+const backendUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/submit_site` : 'http://localhost:5000/submit_site';
 
 export async function POST(request: Request) {
   try {

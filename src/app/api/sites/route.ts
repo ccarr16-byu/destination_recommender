@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const backendUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5000';
+const backendUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/all_sites` : 'http://localhost:5000/all_sites';
 
 export async function GET() {
   try {
