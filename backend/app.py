@@ -19,8 +19,17 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Load environment variables from root directory in development
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+# Load environment variables from .env file only in development
+if not os.getenv('VERCEL'):
+    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+    logging.info("Running in development mode - loaded .env file")
+else:
+    logging.info("Running in production mode - using Vercel environment variables")
+
+# Log environment variable status (without exposing values)
+logging.info(f"SUPABASE_URL is {'set' if os.getenv('SUPABASE_URL') else 'not set'}")
+logging.info(f"SUPABASE_KEY is {'set' if os.getenv('SUPABASE_KEY') else 'not set'}")
+logging.info(f"OPENAI_API_KEY is {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}")
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
