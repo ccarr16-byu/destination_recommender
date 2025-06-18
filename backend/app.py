@@ -20,8 +20,7 @@ logging.basicConfig(
 )
 
 # Load environment variables from root directory in development
-if os.getenv('VERCEL') is None:  # Only load .env file in development
-    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
