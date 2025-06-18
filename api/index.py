@@ -4,7 +4,7 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer, util
 import os
 import json
-import ast  # Add this import for safely evaluating string representations of lists
+import ast
 import requests
 from typing import Optional
 from dotenv import load_dotenv
@@ -20,17 +20,8 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Load environment variables from .env file only in development
-if not os.environ.get('VERCEL'):
-    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
-    logging.info("Running in development mode - loaded .env file")
-else:
-    logging.info("Running in production mode - using Vercel environment variables")
-
-# Log environment variable status (without exposing values)
-logging.info(f"SUPABASE_URL is {'set' if os.environ.get('SUPABASE_URL') else 'not set'}")
-logging.info(f"SUPABASE_KEY is {'set' if os.environ.get('SUPABASE_KEY') else 'not set'}")
-logging.info(f"OPENAI_API_KEY is {'set' if os.environ.get('OPENAI_API_KEY') else 'not set'}")
+# Load environment variables
+load_dotenv()
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
@@ -39,32 +30,27 @@ client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 try:
     supabase_url = os.environ.get('SUPABASE_URL')
     supabase_key = os.environ.get('SUPABASE_KEY')
-    logging.info(f"Attempting to connect to Supabase at URL: {supabase_url[:20]}...")  # Only log part of URL for security
+    logging.info(f"Attempting to connect to Supabase at URL: {supabase_url[:20]}...")
     supabase: Client = create_client(supabase_url, supabase_key)
     logging.info("Successfully initialized Supabase client")
 except Exception as e:
     logging.error(f"Failed to initialize Supabase client: {str(e)}")
     raise
 
-fdir = os.path.dirname(__file__)
-def getPath(fname):
-    return os.path.join(fdir, fname)
+# Initialize the model
+model = SentenceTransformer('all-mpnet-base-v2')
 
 app = Flask(__name__)
-CORS(app)  # This allows requests from your Next.js frontend
-
-# Initialize the model once at startup
-model = SentenceTransformer('all-mpnet-base-v2')
+CORS(app)
 
 def get_place_photo(place_name: str, location: tuple[float, float]) -> Optional[str]:
     """Fetch a photo for a place using Google Places API."""
     try:
-        # First, search for the place to get its place_id
         search_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
         search_params = {
             "query": place_name,
             "location": f"{location[0]},{location[1]}",
-            "radius": "1000",  # 1km radius
+            "radius": "1000",
             "key": os.environ.get("GOOGLE_MAPS_API_KEY")
         }
         
@@ -76,7 +62,6 @@ def get_place_photo(place_name: str, location: tuple[float, float]) -> Optional[
             
         place_id = search_data["results"][0]["place_id"]
         
-        # Then, get the place details to get photo reference
         details_url = "https://maps.googleapis.com/maps/api/place/details/json"
         details_params = {
             "place_id": place_id,
@@ -91,8 +76,6 @@ def get_place_photo(place_name: str, location: tuple[float, float]) -> Optional[
             return None
             
         photo_reference = details_data["result"]["photos"][0]["photo_reference"]
-        
-        # Construct the photo URL
         photo_url = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference={photo_reference}&key={os.environ.get('GOOGLE_MAPS_API_KEY')}"
         return photo_url
         
@@ -127,93 +110,9 @@ def enhance_description(description: str, site_name: str) -> str:
         
     except Exception as e:
         logging.error(f"Error enhancing description: {str(e)}")
-        return description  # Return original description if enhancement fails
+        return description
 
-@app.route('/process_search', methods=['POST'])
-def process_search():
-    try:
-        # Get the search query from the request
-        data = request.get_json()
-        query = f"{data.get('query')}"
-        
-        print(f"Received search query: {query}")
-
-        top_sites = find_similar_sites(query)
-        
-        if not top_sites:
-            return jsonify({
-                "message": "No matching sites found",
-                "query": query
-            })
-        
-        # Convert the pandas Series objects to dictionaries
-        site_names = [site['site_name'] for site in top_sites]
-        
-        return jsonify({
-            "message": f"Top 3 recommended sites for you: {', '.join(site_names)}",
-            "query": query,
-            "sites": [{
-                'name': site['site_name'],
-                'description': site['description'],
-                'similarity': site['similarity'],
-                'photo_url': site.get('photo_url'),
-                'latitude': site['latitude'],
-                'longitude': site['longitude']
-            } for site in top_sites]
-        })
-        
-    except Exception as e:
-        print(f"Error in process_search: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-    
-def find_similar_sites(query, top_k=3):
-    """
-    Finds the top_k most similar national park sites to a given search query based on embeddings.
-    """
-    try:
-        # Fetch all sites from Supabase
-        response = supabase.table('sites').select('*').execute()
-        sites = response.data
-        
-        if not sites:
-            print("No sites found in database")
-            return []
-            
-        similarity_scores = []
-        search_embedding = model.encode(query)
-        
-        # Process each site's embeddings
-        for site in sites:
-            try:
-                # Get the embedding string and convert it to a list of floats
-                embedding_str = site['embeddings']
-                # Split by whitespace and convert to float, handling scientific notation
-                embedding_list = [float(x) for x in embedding_str.strip('[]').split()]
-                
-                # Calculate similarity
-                similarity_score = util.cos_sim(embedding_list, search_embedding).item()
-                similarity_scores.append(similarity_score)
-                
-            except Exception as e:
-                print(f"Error processing site {site['site_name']}: {str(e)}")
-                print(f"Problematic embedding string: {embedding_str[:200]}...")
-                similarity_scores.append(0)
-
-        # Add similarity scores to sites
-        for site, score in zip(sites, similarity_scores):
-            site['similarity'] = score
-
-        # Sort by similarity and get top_k
-        sorted_sites = sorted(sites, key=lambda x: x['similarity'], reverse=True)[:top_k]
-        print(f"\nTop {top_k} sites found with scores: {[site['similarity'] for site in sorted_sites]}")
-
-        return sorted_sites
-
-    except Exception as e:
-        print(f"An error occurred in find_similar_sites: {str(e)}")
-        return []
-
-@app.route('/all_sites', methods=['GET'])
+@app.route('/api/all_sites', methods=['GET'])
 def get_all_sites():
     try:
         # Test Supabase connection first
@@ -290,7 +189,7 @@ def get_all_sites():
             }
         }), 500
 
-@app.route('/submit_site', methods=['POST'])
+@app.route('/api/submit_site', methods=['POST'])
 def submit_site():
     try:
         data = request.get_json()
@@ -326,7 +225,7 @@ def submit_site():
             'latitude': data['latitude'],
             'longitude': data['longitude'],
             'photo_url': photo_url,
-            'embeddings': ' '.join(map(str, embedding))  # Convert list to space-separated string
+            'embeddings': ' '.join(map(str, embedding))
         }
         
         # Insert the new site into Supabase
@@ -348,5 +247,78 @@ def submit_site():
         logging.error(f"Error in submit_site: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(port=5000, debug=True) 
+@app.route('/api/process_search', methods=['POST'])
+def process_search():
+    try:
+        data = request.get_json()
+        query = f"{data.get('query')}"
+        
+        print(f"Received search query: {query}")
+
+        top_sites = find_similar_sites(query)
+        
+        if not top_sites:
+            return jsonify({
+                "message": "No matching sites found",
+                "query": query
+            })
+        
+        site_names = [site['site_name'] for site in top_sites]
+        
+        return jsonify({
+            "message": f"Top 3 recommended sites for you: {', '.join(site_names)}",
+            "query": query,
+            "sites": [{
+                'name': site['site_name'],
+                'description': site['description'],
+                'similarity': site['similarity'],
+                'photo_url': site.get('photo_url'),
+                'latitude': site['latitude'],
+                'longitude': site['longitude']
+            } for site in top_sites]
+        })
+        
+    except Exception as e:
+        print(f"Error in process_search: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+def find_similar_sites(query, top_k=3):
+    """Finds the top_k most similar national park sites to a given search query based on embeddings."""
+    try:
+        response = supabase.table('sites').select('*').execute()
+        sites = response.data
+        
+        if not sites:
+            print("No sites found in database")
+            return []
+            
+        similarity_scores = []
+        search_embedding = model.encode(query)
+        
+        for site in sites:
+            try:
+                embedding_str = site['embeddings']
+                embedding_list = [float(x) for x in embedding_str.strip('[]').split()]
+                similarity_score = util.cos_sim(embedding_list, search_embedding).item()
+                similarity_scores.append(similarity_score)
+                
+            except Exception as e:
+                print(f"Error processing site {site['site_name']}: {str(e)}")
+                print(f"Problematic embedding string: {embedding_str[:200]}...")
+                similarity_scores.append(0)
+
+        for site, score in zip(sites, similarity_scores):
+            site['similarity'] = score
+
+        sorted_sites = sorted(sites, key=lambda x: x['similarity'], reverse=True)[:top_k]
+        print(f"\nTop {top_k} sites found with scores: {[site['similarity'] for site in sorted_sites]}")
+
+        return sorted_sites
+
+    except Exception as e:
+        print(f"An error occurred in find_similar_sites: {str(e)}")
+        return []
+
+# This is the handler for Vercel serverless functions
+def handler(request):
+    return app(request) 

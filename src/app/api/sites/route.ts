@@ -1,34 +1,28 @@
 import { NextResponse } from 'next/server';
 
-// Get the backend URL based on the environment
+// In development, use localhost, in production use the same origin
 const getBackendUrl = () => {
-  // In development, use localhost
   if (process.env.NODE_ENV === 'development') {
     return 'http://localhost:5000';
   }
-  
-  // In production, use the Vercel deployment URL
-  const vercelUrl = process.env.VERCEL_URL;
-  if (!vercelUrl) {
-    throw new Error('VERCEL_URL environment variable is not set');
-  }
-  
-  // Remove any existing protocol
-  const cleanUrl = vercelUrl.replace(/^https?:\/\//, '');
-  return `https://${cleanUrl}`;
+  return ''; // Empty string means same origin
 };
 
 const BACKEND_URL = getBackendUrl();
 
 export async function GET() {
   try {
-    console.log('Attempting to fetch from:', `${BACKEND_URL}/all_sites`);
+    const url = `${BACKEND_URL}/api/all_sites`;
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('Backend URL:', BACKEND_URL);
+    console.log('Attempting to fetch from:', url);
     
-    const response = await fetch(`${BACKEND_URL}/all_sites`, {
+    const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
-      }
+      },
+      cache: 'no-store' // Disable caching
     });
     
     const responseText = await response.text();
