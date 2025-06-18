@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server';
 
-// Handle both cases where VERCEL_URL might or might not include the protocol
+// Get the backend URL based on the environment
 const getBackendUrl = () => {
+  // In development, use localhost
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:5000';
+  }
+  
+  // In production, use the Vercel deployment URL
   const vercelUrl = process.env.VERCEL_URL;
-  if (!vercelUrl) return 'http://localhost:5000';
+  if (!vercelUrl) {
+    throw new Error('VERCEL_URL environment variable is not set');
+  }
   
-  // If VERCEL_URL already includes https://, use it as is
-  if (vercelUrl.startsWith('https://')) return vercelUrl;
-  
-  // Otherwise, add https://
-  return `https://${vercelUrl}`;
+  // Remove any existing protocol
+  const cleanUrl = vercelUrl.replace(/^https?:\/\//, '');
+  return `https://${cleanUrl}`;
 };
 
 const BACKEND_URL = getBackendUrl();
@@ -18,9 +24,14 @@ export async function GET() {
   try {
     console.log('Attempting to fetch from:', `${BACKEND_URL}/all_sites`);
     
-    const response = await fetch(`${BACKEND_URL}/all_sites`);
-    const responseText = await response.text(); // Get the raw response text first
+    const response = await fetch(`${BACKEND_URL}/all_sites`, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
     
+    const responseText = await response.text();
     console.log('Response status:', response.status);
     console.log('Response headers:', Object.fromEntries(response.headers.entries()));
     console.log('Response body:', responseText);
