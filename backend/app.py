@@ -9,12 +9,13 @@ import requests
 from typing import Optional
 from dotenv import load_dotenv
 import logging
+import sys
 from openai import OpenAI
 from supabase import create_client, Client
 
-# Set up logging
+# Set up logging to stdout
 logging.basicConfig(
-    filename='backend.log',
+    stream=sys.stdout,
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -35,10 +36,15 @@ logging.info(f"OPENAI_API_KEY is {'set' if os.getenv('OPENAI_API_KEY') else 'not
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Initialize Supabase client
-supabase: Client = create_client(
-    os.getenv('SUPABASE_URL'),
-    os.getenv('SUPABASE_KEY')
-)
+try:
+    supabase_url = os.getenv('SUPABASE_URL')
+    supabase_key = os.getenv('SUPABASE_KEY')
+    logging.info(f"Attempting to connect to Supabase at URL: {supabase_url[:20]}...")  # Only log part of URL for security
+    supabase: Client = create_client(supabase_url, supabase_key)
+    logging.info("Successfully initialized Supabase client")
+except Exception as e:
+    logging.error(f"Failed to initialize Supabase client: {str(e)}")
+    raise
 
 fdir = os.path.dirname(__file__)
 def getPath(fname):
