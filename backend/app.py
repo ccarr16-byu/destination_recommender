@@ -33,12 +33,12 @@ logging.info(f"SUPABASE_KEY is {'set' if os.getenv('SUPABASE_KEY') else 'not set
 logging.info(f"OPENAI_API_KEY is {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}")
 
 # Initialize OpenAI client
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
 # Initialize Supabase client
 try:
-    supabase_url = os.getenv('SUPABASE_URL')
-    supabase_key = os.getenv('SUPABASE_KEY')
+    supabase_url = os.environ.get('SUPABASE_URL')
+    supabase_key = os.environ.get('SUPABASE_KEY')
     logging.info(f"Attempting to connect to Supabase at URL: {supabase_url[:20]}...")  # Only log part of URL for security
     supabase: Client = create_client(supabase_url, supabase_key)
     logging.info("Successfully initialized Supabase client")
@@ -65,7 +65,7 @@ def get_place_photo(place_name: str, location: tuple[float, float]) -> Optional[
             "query": place_name,
             "location": f"{location[0]},{location[1]}",
             "radius": "1000",  # 1km radius
-            "key": os.getenv("GOOGLE_MAPS_API_KEY")
+            "key": os.environ.get("GOOGLE_MAPS_API_KEY")
         }
         
         search_response = requests.get(search_url, params=search_params)
@@ -81,7 +81,7 @@ def get_place_photo(place_name: str, location: tuple[float, float]) -> Optional[
         details_params = {
             "place_id": place_id,
             "fields": "photos",
-            "key": os.getenv("GOOGLE_MAPS_API_KEY")
+            "key": os.environ.get("GOOGLE_MAPS_API_KEY")
         }
         
         details_response = requests.get(details_url, params=details_params)
