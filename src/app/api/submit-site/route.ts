@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+const backendUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5000';
+
 export async function POST(request: Request) {
   try {
     const data = await request.json();
@@ -13,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     // Send the data to the backend
-    const response = await fetch(process.env.VERCEL_URL || 'http://localhost:5000', {
+    const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

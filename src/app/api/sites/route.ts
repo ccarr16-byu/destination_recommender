@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 
+const backendUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5000';
+
 export async function GET() {
   try {
-    const response = await fetch(process.env.VERCEL_URL || 'http://localhost:5000');
+    const response = await fetch(backendUrl);
     
     if (!response.ok) {
       throw new Error(`Backend responded with status: ${response.status}`);
