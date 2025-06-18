@@ -6,8 +6,8 @@
       "use": "@vercel/python",
       "config": {
         "runtime": "python3.12",
-        "maxLambdaSize": "50mb",
-        "installCommand": "pip install --upgrade pip setuptools wheel"
+        "maxLambdaSize": "100mb",
+        "installCommand": "pip install --upgrade pip setuptools wheel && pip install -r requirements.txt --no-cache-dir"
       }
     }
   ],
