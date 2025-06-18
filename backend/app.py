@@ -21,16 +21,16 @@ logging.basicConfig(
 )
 
 # Load environment variables from .env file only in development
-if not os.getenv('VERCEL'):
+if not os.environ.get('VERCEL'):
     load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
     logging.info("Running in development mode - loaded .env file")
 else:
     logging.info("Running in production mode - using Vercel environment variables")
 
 # Log environment variable status (without exposing values)
-logging.info(f"SUPABASE_URL is {'set' if os.getenv('SUPABASE_URL') else 'not set'}")
-logging.info(f"SUPABASE_KEY is {'set' if os.getenv('SUPABASE_KEY') else 'not set'}")
-logging.info(f"OPENAI_API_KEY is {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}")
+logging.info(f"SUPABASE_URL is {'set' if os.environ.get('SUPABASE_URL') else 'not set'}")
+logging.info(f"SUPABASE_KEY is {'set' if os.environ.get('SUPABASE_KEY') else 'not set'}")
+logging.info(f"OPENAI_API_KEY is {'set' if os.environ.get('OPENAI_API_KEY') else 'not set'}")
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
@@ -93,7 +93,7 @@ def get_place_photo(place_name: str, location: tuple[float, float]) -> Optional[
         photo_reference = details_data["result"]["photos"][0]["photo_reference"]
         
         # Construct the photo URL
-        photo_url = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference={photo_reference}&key={os.getenv('GOOGLE_MAPS_API_KEY')}"
+        photo_url = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference={photo_reference}&key={os.environ.get('GOOGLE_MAPS_API_KEY')}"
         return photo_url
         
     except Exception as e:

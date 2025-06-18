@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 # Get Supabase credentials
-supabase_url = os.getenv('SUPABASE_URL')
-supabase_key = os.getenv('SUPABASE_KEY')
+supabase_url = os.environ.get('SUPABASE_URL')
+supabase_key = os.environ.get('SUPABASE_KEY')
 
 print(f"Supabase URL: {supabase_url}")
 print(f"Supabase Key exists: {'Yes' if supabase_key else 'No'}")
