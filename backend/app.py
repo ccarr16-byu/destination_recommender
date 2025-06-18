@@ -216,34 +216,43 @@ def find_similar_sites(query, top_k=3):
 @app.route('/all_sites', methods=['GET'])
 def get_all_sites():
     try:
-        logging.info("=== Starting get_all_sites request ===")
-        
         # Test Supabase connection first
         try:
-            logging.info("Testing Supabase connection...")
+            supabase_url = os.environ.get('SUPABASE_URL')
+            supabase_key = os.environ.get('SUPABASE_KEY')
+            
+            if not supabase_url or not supabase_key:
+                return jsonify({
+                    "error": "Database configuration error",
+                    "details": {
+                        "supabase_url_set": bool(supabase_url),
+                        "supabase_key_set": bool(supabase_key)
+                    }
+                }), 500
+
             test_response = supabase.table('sites').select('count').execute()
-            logging.info(f"Supabase connection test successful. Count: {test_response.data}")
         except Exception as e:
-            logging.error(f"Supabase connection test failed: {str(e)}")
-            return jsonify({"error": f"Database connection error: {str(e)}"}), 500
+            return jsonify({
+                "error": "Database connection error",
+                "details": {
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "supabase_url_set": bool(os.environ.get('SUPABASE_URL')),
+                    "supabase_key_set": bool(os.environ.get('SUPABASE_KEY'))
+                }
+            }), 500
 
         # Fetch all sites
-        logging.info("Fetching all sites from Supabase...")
         response = supabase.table('sites').select('*').order('site_name').execute()
         sites = response.data
         
-        logging.info(f"Raw response from Supabase: {response}")
-        logging.info(f"Number of sites retrieved: {len(sites) if sites else 0}")
-        
         if not sites:
-            logging.warning("No sites found in database")
             return jsonify({"sites": []})
         
         # Transform the data to match the expected format
         formatted_sites = []
         for site in sites:
             try:
-                logging.info(f"Processing site: {site.get('site_name', 'unknown')}")
                 formatted_site = {
                     'name': site['site_name'],
                     'description': site['description'],
@@ -252,25 +261,34 @@ def get_all_sites():
                     'photo_url': site.get('photo_url')
                 }
                 formatted_sites.append(formatted_site)
-                logging.info(f"Successfully formatted site: {formatted_site['name']}")
             except KeyError as e:
-                logging.error(f"Missing required field in site data: {str(e)}")
-                logging.error(f"Problematic site data: {site}")
-                continue
+                return jsonify({
+                    "error": "Data format error",
+                    "details": {
+                        "missing_field": str(e),
+                        "site_data": site
+                    }
+                }), 500
             except ValueError as e:
-                logging.error(f"Error converting coordinates for site {site.get('site_name', 'unknown')}: {str(e)}")
-                continue
-        
-        logging.info(f"Successfully formatted {len(formatted_sites)} sites")
-        logging.info("=== Completed get_all_sites request ===")
+                return jsonify({
+                    "error": "Data conversion error",
+                    "details": {
+                        "site_name": site.get('site_name', 'unknown'),
+                        "error": str(e)
+                    }
+                }), 500
         
         return jsonify({
             "sites": formatted_sites
         })
     except Exception as e:
-        logging.error(f"Error in get_all_sites: {str(e)}")
-        logging.error(f"Full error details: {str(e.__class__.__name__)}: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": "Unexpected error",
+            "details": {
+                "error_type": type(e).__name__,
+                "error_message": str(e)
+            }
+        }), 500
 
 @app.route('/submit_site', methods=['POST'])
 def submit_site():
